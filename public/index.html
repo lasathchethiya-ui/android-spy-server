@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spy Panel - Login</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, Arial, sans-serif; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.box { background: #1e293b; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; }
+h1 { font-size: 24px; margin-bottom: 8px; }
+.sub { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+input { width: 100%; padding: 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; font-size: 15px; margin-bottom: 12px; }
+input:focus { outline: none; border-color: #3b82f6; }
+button { width: 100%; padding: 14px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+button:hover { background: #2563eb; }
+button:disabled { opacity: 0.5; }
+.link { text-align: center; margin-top: 16px; font-size: 14px; color: #94a3b8; }
+.link a { color: #3b82f6; text-decoration: none; cursor: pointer; }
+.msg { padding: 12px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
+.msg.err { background: #7f1d1d; display: block; }
+.msg.ok { background: #14532d; display: block; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🕵️ Spy Panel</h1>
+  <p class="sub">Login to view devices</p>
+  <div id="msg" class="msg"></div>
+  <input type="email" id="email" placeholder="Email address">
+  <input type="password" id="password" placeholder="Password (min 8 chars)">
+  <button id="btn" onclick="doAction()">Login</button>
+  <div class="link">
+    <span id="toggleText">No account? </span>
+    <a onclick="toggleMode()" id="toggle">
+  </div>
+</div>
+<script>
+const API = '';
+let mode = 'login';
+
+function toggleMode() {
+  mode = mode === 'login' ? 'register' : 'login';
+  document.getElementById('btn').textContent = mode === 'login' ? 'Login' : 'Register';
+  document.getElementById('toggleText').textContent = mode === 'login' ? 'No account? ' : 'Have account? ';
+  document.getElementById('toggle').textContent = mode === 'login' ? 'Register' : 'Login';
+  hideMsg();
+}
+
+function showMsg(t, ok) {
+  const m = document.getElementById('msg');
+  m.textContent = t;
+  m.className = 'msg ' + (ok ? 'ok' : 'err');
+}
+
+function hideMsg() { document.getElementById('msg').className = 'msg'; }
+
+async function doAction() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMsg('Enter valid email address', false);
+  if (password.length < 8) return showMsg('Password must be 8+ characters', false);
+
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/' + mode, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (!data.ok) return showMsg(data.msg || 'Failed', false);
+
+    if (mode === 'register') {
+      showMsg('Registered! Now login.', true);
+      toggleMode();
+    } else {
+      localStorage.setItem('email', email);
+      localStorage.setItem('token', data.token);
+      location.href = '/dashboard.html';
+    }
+  } catch (e) {
+    showMsg('Server error: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
+
+
