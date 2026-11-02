@@ -1,0 +1,17 @@
+{
+  "name": "android-spy-server",
+  "version": "1.0.0",
+  "description": "Android Spy App Server + Web Panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^2^.18.2",
+    "socket.io": "^3^.5.0",
+    "crypto": "^1^.0.1"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
