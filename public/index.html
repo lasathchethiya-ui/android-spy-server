@@ -31,9 +31,9 @@ button:disabled { opacity: 0.5; }
   <input type="password" id="password" placeholder="Password (min 8 chars)">
   <button id="btn" onclick="doAction()">Login</button>
   <div class="link">
-    <span id="toggleText">No account? </span>
-    <a onclick="toggleMode()" id="toggle">
-  </div>
+  <span id="toggleText">No account? </span>
+  <a href="#" onclick="toggleMode(); return false;" id="toggle">Register</a>
+</div>
 </div>
 <script>
 const API = '';
