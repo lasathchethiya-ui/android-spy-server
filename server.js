@@ -93,6 +93,17 @@ io.on('connection', (socket) => {
         } catch (e) { console.log('[DATA ERR]', e.message); }
     });
 
+    socket.on('command', (payload) => {
+        try {
+            const { uid, command } = payload;
+            if (!uid || !deviceData[uid]) return;
+            const targetSocketId = deviceData[uid].socketId;
+            if (!targetSocketId) return;
+            io.to(targetSocketId).emit('commands', [payload]);
+            console.log('[COMMAND]', uid, command);
+        } catch (e) { console.log('[COMMAND ERR]', e.message); }
+    });
+
     socket.on('disconnect', () => {
         for (const uid in deviceData) {
             if (deviceData[uid].socketId === socket.id) deviceData[uid].socketId = null;
