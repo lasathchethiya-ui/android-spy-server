@@ -117,10 +117,18 @@ async function loadData() {
     const el = document.createElement('div');
     el.className = 'entry';
     const t = new Date(d.receivedAt).toLocaleString();
-    const copy = Object.assign({}, d);
-    delete copy.receivedAt;
-    el.innerHTML = '<span class="type">' + (d.dataType || 'data') + '</span><span class="time">' + t + '</span><pre>' +
-      JSON.stringify(copy, null, 2).replace(/</g, '&lt;') + '</pre>';
+
+    // Photo එකක් නම් — පින්තූරයක් විදිහට පෙන්නන්න
+    if (d.dataType === 'images' && d.image) {
+      el.innerHTML = '<span class="type">🖼️ Photo</span><span class="time">' + t + '</span>' +
+        '<div style="margin-top:8px"><img src="data:image/jpeg;base64,' + d.image + '" style="max-width:100%;border-radius:8px;margin-top:8px"></div>' +
+        '<div style="color:#64748b;font-size:12px;margin-top:6px">' + (d.name || '') + '</div>';
+    } else {
+      const copy = Object.assign({}, d);
+      delete copy.receivedAt;
+      el.innerHTML = '<span class="type">' + (d.dataType || 'data') + '</span><span class="time">' + t + '</span><pre>' +
+        JSON.stringify(copy, null, 2).replace(/</g, '&lt;') + '</pre>';
+    }
     box.appendChild(el);
   });
 }
